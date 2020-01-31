@@ -39,6 +39,9 @@ __Conclusion__
 
   The conventional TTO preference aggregation procedure gives individuals with a wider range of utility values systematically more weight in the estimation of the EQ-5D 3L social tariff. The proposed alternative method can resolve this issue and provides significantly different social health state values.
 
+****
+
+![Comparison between the conventional (CAM) and the alternative multi-step utility aggregation procedure (MUAP) social EQ-5D 3L tariff](https://github.com/bitowaqr/eq5d_muap/raw/master/output/comparisonplot.png)
 
 ****
 
