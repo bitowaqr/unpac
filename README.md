@@ -12,7 +12,7 @@
 
 <br> 
 
-  EuroQol ECR 2020 discussion paper: [tbc]()
+  EuroQol ECR 2020 discussion paper: [link](https://github.com/bitowaqr/eq5d_muap/raw/master/wp/wp_31012020.pdf)
   
 ****
 
