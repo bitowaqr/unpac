@@ -41,7 +41,11 @@ __Conclusion__
 
 ****
 
-![Comparison between the conventional (CAM) and the alternative multi-step utility aggregation procedure (MUAP) social EQ-5D 3L tariff](https://github.com/bitowaqr/eq5d_muap/raw/master/output/comparisonplot.png)
+##### Run the `analysis.R` file in the `R` folder to replicate the results of our analysis.
+
+<br>
+
+![Comparison between the conventional (CAM) and the alternative (MUAP) UK social EQ-5D 3L value set.](https://github.com/bitowaqr/eq5d_muap/raw/master/output/comparisonplot.png)
 
 ****
 
