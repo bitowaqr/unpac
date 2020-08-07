@@ -40,6 +40,7 @@
 ## READ AND PREPARE THE (TRIMMED) UK EQ-5D 3L MVH DATA SET FOR ANALYSIS-----
   dat = read.csv("./data/mvh_trimmed.csv") # 2,997 MVH participant
   # head(dat)   # see first 5 rows
+  dat$healthstate = as.character(dat$healthstate)
   
   # Add 11111 as a health state with a value of 1 for each participant
   dat = dat %>%
