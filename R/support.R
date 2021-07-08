@@ -21,6 +21,24 @@
     df
   }
   
+  
+  # # utility function to normalise preferences
+  normaliseVS <- function(mat){
+    1 -  ((1- mat) / (max(mat)- min(mat)))
+  }
+  
+  # predict values for anchored model
+  predict.anchoredModel <- function(fit, hs){
+    
+    if(is.null(dim(hs))){
+      return(1-sum(fit[,1] * c(1,as.numeric(hs))))
+    }
+    
+    apply(hs,1,function(x){
+      1-sum(fit[,1] * c(1,as.numeric(x)))
+    })
+  }
+  
   # retrieves some useful stats from social value sets
   make_sts = function(CAM,MUAP,hs_ref){
     abs.diff = abs(MUAP-CAM)
@@ -69,78 +87,20 @@
     sts_df
   }
   
-  # retrieved diserpsion measures from 2 social value sets
-  get_dispersion = function(CAM,MUAP){
-    df = data.frame(mean = c(mean(CAM),mean(MUAP)),
-                    sd = c(sd(CAM),sd(MUAP)),
-                    min = c(min(CAM),min(MUAP)),
-                    max = c(max(CAM)[1],max(MUAP)[1]),
-                    range = c(max(CAM)[1]-min(CAM)[1],max(MUAP)[1]-min(MUAP)[1]),
-                    max_min_ratio = c(max(CAM)[1]/min(CAM)[1],max(MUAP)[1]/min(MUAP)[1]),
-                    q25 = c(quantile(CAM,0.25),quantile(MUAP,0.25)),
-                    median = c(median(CAM),median(MUAP)),
-                    q75 = c(quantile(CAM,0.75),quantile(MUAP,0.75)),
-                    iqr = c(IQR(CAM),IQR(MUAP))
-                    
-    )
-    df = data.frame(t(df))
-    names(df) = c("CAM","MUAP")
-    df = cbind(df,ratio=df[,"MUAP"]/df[,"CAM"])
-    df$ratio = ifelse(c(F,T,F,F,T,T,F,F,F,T),df$ratio,NA)
-    df = data.frame(apply(df,2,function(x){formatC(x,digits = 3,format = "f")}),stringsAsFactors = F)
-    df$ratio[grepl("NA",df$ratio)]  = ""
-    df
-  }
   
-  # extracts data from lm models
-  make_tbl = function(model,get.rownames=F,give.colname=NULL){
-    temp = formatC(cbind(
-      model$coefficients,confint(model)[,1],confint(model)[,2]),digits=2,format="f")  
-    temp = paste(temp[,1]," (",temp[,2],"; ",temp[,3],")",sep="")
-    r2 = formatC(summary(model)$r.squared,digits=2,format="f")
-    n = summary(model)$df[1] +summary(model)$df[2]
-    temp = c(temp,r2,n)
-    if(get.rownames){
-      temp = cbind(c(names(model$coefficients),"R2","Observations"),
-                   temp)
-      temp[,1] = gsub("TRUE","",temp[,1])
-    } else{
-      temp = cbind(temp)
-      colnames(temp) = give.colname
-    }
-    temp
-  }
   
-  # extracts data from lm models
-  make_mtbl = function(m){ 
-    temp = data.frame(m$coefficients,confint(m))
-    temp = apply(temp,2,function(x){formatC(x,digits=2,format="f")})
-    temp = apply(temp,1,function(x){paste(x[1]," (",x[2],"; ",x[3],")",sep="")})
-    temp = data.frame(cbind(temp),stringsAsFactors = F)
-    names(temp) = ""
-    if(length(temp[,1])==2){
-      temp = rbind(temp,c(""),c(""))
-    }
-    if(length(temp[,1])==3){
-      temp = rbind(temp,c(""))
-    }
-    
-    temp = rbind(temp,"R$^2$" = formatC(summary(m)$r.squared,digits=2,format="f"),"N"=summary(m)$df[1]+summary(m)$df[2])
-    
-    return(temp)
-  }  
-
-  # computes individuals' influences
+  # # computes individuals' influences
   get_diff = function(M_i,      # matrix with social tariffs estimates without individual i
                       tariff,   # reference social value set
-                      margin=2, # 2=columns represent tariffs without individul i 
+                      margin=2, # 2=columns represent tariffs without individul i
                       scaled=F, # influence could be expressed in other units
                       scale.by=median # e.g. percent of median influence etc
   ){
     diff = apply(M_i,margin,function(x){sum(abs(x-tariff))})
     if(scaled){
-      diff= diff /scale.by(diff)  
+      diff= diff /scale.by(diff)
     }
     diff
   }
+  
   
