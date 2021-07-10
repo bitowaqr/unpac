@@ -1,16 +1,31 @@
 
+# -----------------------------------
+# UNPAc utility aggregation procedure
+# by Paul Schneider
+# University of Sheffield
+# MIT license
+# July 2021
+# -----------------------------------
+
+
+# SENSITIVITY ANALYSIS:
+# EFFECT OF THE UNPAC APPROACH
+# IF THERE IS NO ASSOCIATION BETWEEN
+# AGENTS UTILITY RNAGES AND THEIR
+# PREFERENCE PROFILES
 
 # SETUP  ---------
 
-# # load packages 
+# # load required packages 
 library(ggplot2)
 library(cowplot)
 library(truncnorm)
 library(kableExtra)
+library(dplyr)
 
 options(scipen = 99)
 
-# # clear working space 
+# # clear global enviroment space 
 # rm(list=ls())
 
 # # random seed 
@@ -56,7 +71,10 @@ Gp_pref[,-c(1,n_hs)] <- Gp_pref_mid
 pref_mat <- rbind(Gm_pref, Gp_pref)
 
 
-# STANDARD APPROACH --------------
+
+
+
+# STANDARD UTILITY AGGREGATION APPROACH --------------
 
 standard_vset     <- apply(pref_mat, 2, mean)
 standard_relative_vset <-  normaliseVS(standard_vset)
@@ -65,36 +83,39 @@ standard_hs_ranks <- rank(-standard_vset)
 
 # UNPAc APPROACH -----------------
 
-# Step 1
+# Step 1: normalise
 normalised_preferences <- t(apply(pref_mat,1,normaliseVS))
-# Step 2
+# Step 2: aggregate (mean)
 normalised_vset <- apply(normalised_preferences, 2, mean)
-# Step 3a
+# Step 3a: retrieve individual anchor points 
 anchor <- apply(pref_mat,1,min)
-# step 3b
+# step 3b: aggregate anchor points and re-anchor normalised social value set
 unpac_vset <- 1 + normalised_vset * (1 - mean(anchor)) - (1- mean(anchor))
 unpac_relative_vset <-  normalised_vset
 unpac_hs_ranks <- rank(-unpac_vset)
 
 
-# INFLUENCE -------
+
+
+# ASSESS INFLUENCE -------
 # agents' influences on absolute and relative social value set --------
 
 infl_standard <- infl_standard_rel <- 
   infl_norm_mean <- infl_norm_mean_rel <- rep(NA, n_agents)
 
+# N.B.: This loop may take quite a while(!) to run for 10,000 agents
 for(i in 1:n_agents){
-  # cat("\r  ", i)
-  pref_mat_i <- pref_mat[-i,]
+  
+  cat("\r  Status: ", i," of", n_agents, "     ")
   
   # standard
-  standard_vset_i <- apply(pref_mat_i, 2, mean)
+  standard_vset_i <- apply(pref_mat[-i,], 2, mean)
   
   infl_standard[i]  <- sum(abs(standard_vset_i - standard_vset))
   infl_standard_rel[i] <-  sum(abs(normaliseVS(standard_vset_i) - standard_relative_vset))
   
-  # unpac
-  normalised_preferences_i <-t(apply(pref_mat_i,1,normaliseVS)) 
+  # UNPAc
+  normalised_preferences_i <-t(apply(pref_mat[-i,],1,normaliseVS)) 
   normalised_vset_i <- apply(normalised_preferences_i, 2, mean)
   anchor_i <- mean(anchor[-i])
   unpac_vset_i <- 1 + normalised_vset_i * (1 - anchor_i) - (1- anchor_i)
@@ -106,10 +127,8 @@ for(i in 1:n_agents){
 
 
 
-##################
-
+#############################
 ### OUTPUTS ------------
-
 ##################
 
 
@@ -126,49 +145,11 @@ tbl1 <- cbind(
   cbind(paste0(tbl1c[1,], " (",tbl1c[2,],")"),  tbl1c_rel)
 )
 rownames(tbl1) <- c("fh","i","j","pit")
+colnames(tbl1) <- c("state","GM mean","GM norm","GP mean","GP norm","All norm")
 
-tbl1 <- kable(tbl1, col.names = rep(c("Mean (SD)","Normalised value"),3)) %>%
+kable(tbl1, col.names = rep(c("Mean (SD)","Normalised value"),3)) %>%
   kable_styling() %>%
   add_header_above(header = c("state","Gm (n = 4,500)" = 2, "Gp (n = 5,500)" = 2, "all" = 2))
-tbl1
-
-
-
-# u(PM) histogramm -------------
-
-# # u(PM) distribution
-# ggplot() +
-#   geom_histogram(aes(as.numeric(Gm_pref[,n_hs]), col = "Gm", fill = "Gm"), alpha = 0.5) +
-#   geom_histogram(aes(as.numeric(Gp_pref[,n_hs]), col = "Gp", fill = "Gp"), alpha = 0.5)  +
-#   theme_minimal() 
-
-
-
-# within group plots -----------    
-within_group_vs <- data.frame(
-  value = c(apply(Gm_pref,2,mean),
-            apply(Gp_pref,2,mean),
-            apply(pref_mat,2,mean)
-  ),
-  group = rep(c("Gm", "Gp","Social"), each = n_hs),
-  hs_x = 1:n_hs
-)
-
-ggplot(within_group_vs) +
-  geom_point(aes(x = hs_x, y= value, col = group)) +
-  geom_line(aes(x = hs_x, y= value, col = group), alpha = 1) +
-  scale_x_continuous(breaks = 1:n_hs, labels = hs) +
-  theme_minimal() +
-  theme(legend.position = "top")
-
-within_group_rel_vs <- data.frame(
-  value = c( normaliseVS(apply(Gm_pref,2,mean)),
-             normaliseVS(apply(Gp_pref,2,mean)),
-             normaliseVS(apply(pref_mat,2,mean))
-  ),
-  group = rep(c("Gm", "Gp","Social"), each = n_hs),
-  hs_x = 1:n_hs
-)
 
 
 
@@ -201,43 +182,7 @@ kable(tbl2) %>%
   add_header_above(c("State" = 1, "Standard" = 2, "UNPAc" = 2, "Difference" = 2))
 
 
-vs_df <- data.frame(
-  value = c(standard_vset, standard_relative_vset,
-            # median_vs, median_rel_vs,
-            # norm_median_vs, norm_median_rel_vs,
-            unpac_vset, unpac_relative_vset),
-  method = rep(c("Standard", 
-                 "UNPAc"), 
-               each = n_hs*2),
-  type = rep(c("absolute value set","relative value set"), each = n_hs),
-  hs = hs,
-  hs_x = 1:n_hs
-)
-
-
-
-# fiGp <- ggplot(vs_df[vs_df$type =="absolute value set",]) +
-#   geom_point(aes(x = hs_x, y= value, col = method)) +
-#   geom_line(aes(x = hs_x, y= value, col = method, linetype = method), alpha = 0.5) +
-#   # facet_wrap(~type, nrow = 1) +
-#   scale_x_continuous(breaks = 1:n_hs, labels = hs) +
-#   theme_minimal() +
-#   theme(legend.position = "top")
-# 
-# fiGp
-
-# ggplot(vs_df[vs_df$method %in% c("norm_median","norm_mean"),]) +
-#   geom_point(aes(x = hs_x, y= value, col = method)) +
-#   geom_line(aes(x = hs_x, y= value, col = method, linetype = method), alpha = 0.5) +
-#   facet_wrap(~type, nrow = 2) +
-#   scale_x_continuous(breaks = 1:n_hs, labels = hs) +
-#   theme_minimal() +
-#   theme(legend.position = "top")
-
-
-
-
-# PLOT 1 ----------------
+# Relationship between agents utility ranges and their influences ----------------
 
 infl_df <- data.frame(
   agents_ranges = 1-apply(pref_mat, 1, min),
@@ -250,35 +195,9 @@ infl_df <- data.frame(
 )
 
 
+# simple summary stats --------
 
-# # PLOT  influence  ------
-
-p1 <- ggplot(infl_df[infl_df$type == "abs",]) +
-  geom_point(aes(x = agents_ranges, y = value, col = method), size = 0.1, alpha = 0.3) +
-  geom_smooth(aes(x = agents_ranges, y = value, col = method), se = F) +
-  facet_wrap(~method) +
-  theme_minimal() +
-  ggtitle("Absolute influence")
-
-p2 <- ggplot(infl_df[infl_df$type == "rel",]) +
-  geom_point(aes(x = agents_ranges, y = value, col = method), size = 0.1, alpha = 0.3) +
-  geom_smooth(aes(x = agents_ranges, y = value, col = method), se = F) +
-  facet_wrap(~method) +
-  theme_minimal() +
-  ggtitle("Relative influence")
-
-pl <- get_legend(p1 + theme(legend.position = "top"))
-
-plot_grid(
-  ncol = 1,
-  rel_heights = c(0.1,0.45, 0.45),
-  pl,
-  p1 + theme(legend.position = "none"),
-  p2 + theme(legend.position = "none")
-)
-
-
-
+# summary stats utility function
 sumaryStats <- function(x){
   cbind(
     "mean" = mean(x),
@@ -287,13 +206,110 @@ sumaryStats <- function(x){
   )
 }
 
-
 # summary stats
 sumaryStats(infl_df$value[infl_df$type == "abs" & infl_df$method == "standard"])
 sumaryStats(infl_df$value[infl_df$type == "abs" & infl_df$method == "UNPAc"])
-sumaryStats(infl_df$value[infl_df$type == "abs" & infl_df$method == "standard"])
-sumaryStats(infl_df$value[infl_df$type == "abs" & infl_df$method == "UNPAc"])
+
+sumaryStats(infl_df$value[infl_df$type == "rel" & infl_df$method == "standard"])
+sumaryStats(infl_df$value[infl_df$type == "rel" & infl_df$method == "UNPAc"])
 
 
 
-# save(list = ls(), file = "NULL_savegame.RData")
+# # Figure 1: influence on absolute and relative value sets in the standard and unpac approach  ------
+
+p1 <- ggplot(infl_df[infl_df$type == "abs",]) +
+  geom_point(aes(x = agents_ranges, y = value, col = method), size = 0.1, alpha = 0.3) +
+  geom_smooth(aes(x = agents_ranges, y = value, col = method), se = F) +
+  facet_wrap(~method) +
+  theme_minimal() +
+  xlab("Utility range") +
+  ylab("Influence") +
+  ggtitle("Influence on the absolute social value set")
+
+p2 <- ggplot(infl_df[infl_df$type == "rel",]) +
+  geom_point(aes(x = agents_ranges, y = value, col = method), size = 0.1, alpha = 0.3) +
+  geom_smooth(aes(x = agents_ranges, y = value, col = method), se = F) +
+  facet_wrap(~method) +
+  theme_minimal() +
+  xlab("Utility range") +
+  ylab("Influence") +
+  ggtitle("Influence on the relative social value set")
+
+pl <- get_legend(p1 + theme(legend.position = "top"))
+
+plg <- plot_grid(
+  ncol = 1,
+  rel_heights = c(0.45, 0.45,0.1),
+  p1 + theme(legend.position = "none"),
+  p2 + theme(legend.position = "none"),
+  pl
+)
+
+# save_plot(plg,filename = "./output/plg.png",base_height = 5)
+
+
+
+
+
+
+###########################################################
+# Additional Figures (not reported in the paper) -----
+###############################################
+
+# # u(PM) histogramm -------------
+# # u(PM) distribution
+# ggplot() +
+#   geom_histogram(aes(as.numeric(Gm_pref[,n_hs]), col = "Gm", fill = "Gm"), alpha = 0.5) +
+#   geom_histogram(aes(as.numeric(Gp_pref[,n_hs]), col = "Gp", fill = "Gp"), alpha = 0.5)  +
+#   theme_minimal()
+
+# #within group plots -----------    
+# within_group_vs <- data.frame(
+#   value = c(apply(Gm_pref,2,mean),
+#             apply(Gp_pref,2,mean),
+#             apply(pref_mat,2,mean)
+#   ),
+#   group = rep(c("Gm", "Gp","Social"), each = n_hs),
+#   hs_x = 1:n_hs
+# )
+# 
+# ggplot(within_group_vs) +
+#   geom_point(aes(x = hs_x, y= value, col = group)) +
+#   geom_line(aes(x = hs_x, y= value, col = group), alpha = 1) +
+#   scale_x_continuous(breaks = 1:n_hs, labels = hs) +
+#   theme_minimal() +
+#   theme(legend.position = "top")
+
+#  # within_group_rel_vs <- data.frame(
+#   value = c( normaliseVS(apply(Gm_pref,2,mean)),
+#              normaliseVS(apply(Gp_pref,2,mean)),
+#              normaliseVS(apply(pref_mat,2,mean))
+#   ),
+#   group = rep(c("Gm", "Gp","Social"), each = n_hs),
+#   hs_x = 1:n_hs
+# )
+# 
+
+# # alternative comparison
+# vs_df <- data.frame(
+#   value = c(standard_vset, standard_relative_vset,
+#             # median_vs, median_rel_vs,
+#             # norm_median_vs, norm_median_rel_vs,
+#             unpac_vset, unpac_relative_vset),
+#   method = rep(c("Standard",
+#                  "UNPAc"),
+#                each = n_hs*2),
+#   type = rep(c("absolute value set","relative value set"), each = n_hs),
+#   hs = hs,
+#   hs_x = 1:n_hs
+# )
+# 
+# fiGp <- ggplot(vs_df[vs_df$type =="absolute value set",]) +
+#   geom_point(aes(x = hs_x, y= value, col = method)) +
+#   geom_line(aes(x = hs_x, y= value, col = method, linetype = method), alpha = 0.5) +
+#   # facet_wrap(~type, nrow = 1) +
+#   scale_x_continuous(breaks = 1:n_hs, labels = hs) +
+#   theme_minimal() +
+#   theme(legend.position = "top")
+# 
+# fiGp
